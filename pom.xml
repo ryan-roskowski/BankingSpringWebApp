@@ -18,6 +18,17 @@
 	</properties>
 
 	<dependencies>
+	<dependency>
+    	<groupId>org.springframework</groupId>
+    	<artifactId>spring-core</artifactId>
+    	<version>5.0.7.RELEASE</version>
+	</dependency>
+ 
+	<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context</artifactId>
+    <version>5.0.7.RELEASE</version>
+	</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-rest</artifactId>
@@ -56,11 +67,7 @@
 			<version>4.6.1</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>BankingApplication</groupId>
-			<artifactId>BankingApplication</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
+		
 	</dependencies>
 
 	<build>

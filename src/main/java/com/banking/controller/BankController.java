@@ -3,59 +3,69 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
-import com.bank.beans.*;
-import com.bank.dao.*;
-import com.bank.dao.impl.*;
-import com.bank.data.Database;
-import com.bank.enums.DepositResult;
-import com.bank.enums.UserAction;
-import com.bank.enums.WithdrawResult;
-import com.bank.controller.*;
-import com.bank.services.*;
-import com.bank.services.impl.*;
+import com.banking.dao.*;
+import com.banking.dao.impl.*;
+import com.banking.data.Database;
+import com.banking.entities.*;
+import com.banking.entities.Customer;
+import com.banking.entities.Employee;
+import com.banking.entities.Properties;
+import com.banking.entities.Transaction;
+import com.banking.entities.User;
+import com.banking.controller.*;
+import com.banking.services.AccountService;
+import com.banking.services.EmployeeService;
+import com.banking.services.UserService;
+import com.banking.services.impl.AccountServiceImpl;
+import com.banking.services.impl.EmployeeServiceImpl;
+import com.banking.services.impl.UserServiceImpl;
+import com.banking.enums.DepositResult;
+import com.banking.enums.UserAction;
+import com.banking.enums.WithdrawResult;
+import com.banking.services.*;
+import com.banking.services.impl.*;
 
 @Controller
 public class BankController {
+	
+	@Autowired
 	private Database data;
+	@Autowired
 	private Properties properties;
+	@Autowired
 	private UserDao userDao;
+	@Autowired
 	private CustomerDao customerDao;
+	@Autowired
 	private EmployeeDao employeeDao;
+	@Autowired
 	private AccountDao accountDao;
+	@Autowired
 	private TransactionDao transactionDao;
+	@Autowired
 	private UserService userService;
+	@Autowired
 	private EmployeeService employeeService;
+	@Autowired
 	private AccountService accountService;
+	@Autowired
 	private LoginController loginController;
+	@Autowired
 	private AccountController accountController;
 	
-	public BankController() {
-		try {
-			data = new Database();
-			properties = new Properties("properties.txt");
-			userDao = new UserDaoImpl(properties, data);
-			customerDao = new CustomerDaoImpl(properties, data);
-			employeeDao = new EmployeeDaoImpl(properties, data);
-			accountDao = new AccountDaoImpl(properties, data);
-			transactionDao = new TransactionDaoImpl(properties, data);
-			userService = new UserServiceImpl();
-			employeeService = new EmployeeServiceImpl((UserDaoImpl)userDao, (CustomerDaoImpl)customerDao);
-			accountService = new AccountServiceImpl((AccountDaoImpl)accountDao, (TransactionDaoImpl)transactionDao);
-			loginController = new LoginController((UserDaoImpl)userDao, (EmployeeDaoImpl)employeeDao, (CustomerDaoImpl)customerDao);
-			accountController = new AccountController((AccountDaoImpl)accountDao, (TransactionDaoImpl)transactionDao);
-			data.generateDefaultData();
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
+	@PostConstruct
+	public void init() {
+	  data.generateDefaultData();
 	}
 	
 	@RequestMapping("/")
