@@ -6,18 +6,16 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import com.banking.entities.Customer;
-import com.banking.entities.Properties;
+import com.banking.entities.DBProperties;
 import com.banking.data.Database;
 
 @Component
@@ -27,22 +25,20 @@ public class CustomerDaoImpl implements com.banking.dao.CustomerDao {
 	private Database data;
 	
 	@Autowired
-	private Properties properties;
+	private DBProperties properties;
+	
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 	
 	private boolean useDatabase;
-	public CustomerDaoImpl(Properties properties, Database data) throws ClassNotFoundException, IOException {
-		if(properties.getProperties().get("data-source").equals("database")) {
+	public CustomerDaoImpl(DBProperties properties, Database data) throws ClassNotFoundException, IOException {
+		if(properties.getDatasource().equals("database")) {
 			this.useDatabase = true;
-			try {
-				Class.forName("oracle.jdbc.driver.OracleDriver");
-			} catch (ClassNotFoundException e) {
-				throw new ClassNotFoundException("oracle.jdbc.driver.OracleDriver class not found.");
-			}
 		}
-		else if(properties.getProperties().get("data-source").equals("file")) {
+		else if(properties.getDatasource().equals("file")) {
 			BufferedReader reader;
 			try {
-				reader = new BufferedReader(new FileReader(properties.getProperties().get("customerData")));
+				reader = new BufferedReader(new FileReader(properties.getCustomerData()));
 				String line;
 				String[] customerData;
 				while((line = reader.readLine()) != null) {
@@ -69,31 +65,19 @@ public class CustomerDaoImpl implements com.banking.dao.CustomerDao {
 			return null;
 		}
 		else {
-			try {
-				Connection conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:xe","system","password");
-				Statement st = conn.createStatement();
-				ResultSet rs = st.executeQuery("Select * from BANKING_APPLICATION_CUSTOMERS where USERID = "+userId);
-				if(rs.next() == false) {
-					return null;
-				}
-				else {
-					
-					Customer cust = new Customer(rs.getInt("ID"), rs.getInt("USERID"),rs.getString("FIRST_NAME"), rs.getString("LAST_NAME"), rs.getString("ADDRESS"), rs.getString("PHONE"));
-					cust.setType("Customer");
-					return cust;
-
+			return (Customer) jdbcTemplate.queryForObject("Select * from BANKING_APPLICATION_CUSTOMERS where USERID = "+userId, new RowMapper<Customer>() {
+				@Override
+				public Customer mapRow(ResultSet rs, int rowNum) throws SQLException {
+					return new Customer(rs.getInt("ID"), rs.getInt("USERID"),rs.getString("FIRST_NAME"), rs.getString("LAST_NAME"), rs.getString("ADDRESS"), rs.getString("PHONE"));
 				}
 				
-			} catch(SQLException e) {
-				e.printStackTrace();
-				throw new SQLException("Database error trying to get user.");
-				
-			}
+			});
 		}
 	}
 
 	@Override
 	public void addCustomerWithUserId(String username, String firstname, String lastname, String address, String phonenumber) throws IOException, SQLException {
+		System.out.println("Trying to add Customer");
 		if(!isUseDatabase()) {
 			int uniqueID;
 			boolean unique = true;
@@ -110,9 +94,9 @@ public class CustomerDaoImpl implements com.banking.dao.CustomerDao {
 			}
 			int userId = data.getUserList().get(username).getUserId();
 			data.getCustomerList().put(uniqueID, new Customer(uniqueID, userId, firstname, lastname, address, phonenumber));
-			if(properties.getProperties().get("data-source").equals("file")) {
+			if(properties.getDatasource().equals("file")) {
 				try {
-					BufferedWriter writer = new BufferedWriter(new FileWriter(properties.getProperties().get("customerData"), true));
+					BufferedWriter writer = new BufferedWriter(new FileWriter(properties.getCustomerData(), true));
 					writer.write(uniqueID+":"+userId+":"+firstname+":"+lastname+":"+address+":"+phonenumber);
 					writer.newLine();
 					writer.close();
@@ -122,24 +106,8 @@ public class CustomerDaoImpl implements com.banking.dao.CustomerDao {
 			}
 		}
 		else {
-			try {
-				Connection conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:xe","system","password");
-				Statement st = conn.createStatement();
-				ResultSet rs = st.executeQuery("SELECT ID FROM BANKING_APPLICATION_USERS WHERE USERNAME = '"+username+"'");
-				PreparedStatement ps = conn.prepareStatement("Insert into BANKING_APPLICATION_CUSTOMERS (ID, USERID, FIRST_NAME, LAST_NAME, ADDRESS, PHONE) VALUES (BANKING_APPLICATION_CUSTOMERS_PKSEQ.nextval, ?, ?, ?, ?, ?)");
-				if(rs.next() == false)
-					throw new SQLException("User "+username+" does not exist, cannot add customer.");
-				int userId = rs.getInt("ID");
-				ps.setInt(1, userId);
-				ps.setString(2, firstname);
-				ps.setString(3, lastname);
-				ps.setString(4, address);
-				ps.setString(5, phonenumber);
-				ps.executeUpdate();
-			}catch(SQLException e) {
-				e.printStackTrace();
-				throw new SQLException("Database error trying to add customer.");
-			}
+			int userId = Integer.parseInt((String) (jdbcTemplate.queryForObject("SELECT ID FROM BANKING_APPLICATION_USERS WHERE USERNAME = '"+username+"'", String.class)));
+			jdbcTemplate.execute("Insert into BANKING_APPLICATION_CUSTOMERS (ID, USERID, FIRST_NAME, LAST_NAME, ADDRESS, PHONE) VALUES (BANKING_APPLICATION_CUSTOMERS_PKSEQ.nextval, "+userId+", '"+firstname+"', '"+lastname+"', '"+address+"', '"+phonenumber+"')");
 		}
 	}
 
@@ -151,11 +119,11 @@ public class CustomerDaoImpl implements com.banking.dao.CustomerDao {
 		this.data = data;
 	}
 
-	public Properties getProperties() {
+	public DBProperties getProperties() {
 		return properties;
 	}
 
-	public void setProperties(Properties properties) {
+	public void setProperties(DBProperties properties) {
 		this.properties = properties;
 	}
 

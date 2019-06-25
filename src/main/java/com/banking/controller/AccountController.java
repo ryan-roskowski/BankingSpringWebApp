@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import com.banking.entities.Account;
 import com.banking.entities.Customer;
-import com.banking.entities.User;
 import com.banking.dao.impl.AccountDaoImpl;
 import com.banking.dao.impl.TransactionDaoImpl;
 import com.banking.services.impl.AccountServiceImpl;

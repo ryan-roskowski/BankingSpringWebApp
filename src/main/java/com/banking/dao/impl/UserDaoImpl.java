@@ -6,18 +6,16 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import com.banking.entities.User;
-import com.banking.entities.Properties;
+import com.banking.entities.DBProperties;
 import com.banking.data.Database;
 
 @Component
@@ -27,23 +25,21 @@ public class UserDaoImpl implements com.banking.dao.UserDao {
 	private Database data;
 	
 	@Autowired
-	private Properties properties;
+	private DBProperties properties;
+	
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 	
 	private boolean useDatabase;
 	
-	public UserDaoImpl(Properties properties, Database data) throws IOException, ClassNotFoundException  {
-		if(properties.getProperties().get("data-source") != null && properties.getProperties().get("data-source").equals("database")) {
+	public UserDaoImpl(DBProperties properties, Database data) throws IOException, ClassNotFoundException  {
+		if(properties.getDatasource() != null && properties.getDatasource().equals("database")) {
 			this.useDatabase = true;
-			try {
-				Class.forName("oracle.jdbc.driver.OracleDriver");
-			} catch (ClassNotFoundException e) {
-				throw new ClassNotFoundException("oracle.jdbc.driver.OracleDriver class not found.");
-			}
 		}
-		else if(properties.getProperties().get("data-source") != null && properties.getProperties().get("data-source").equals("file")) {
+		else if(properties.getDatasource() != null && properties.getDatasource().equals("file")) {
 			BufferedReader reader;
 			try {
-				reader = new BufferedReader(new FileReader(properties.getProperties().get("userData")));
+				reader = new BufferedReader(new FileReader(properties.getUserData()));
 				String line;
 				String[] userData;
 				while((line = reader.readLine()) != null) {
@@ -70,28 +66,16 @@ public class UserDaoImpl implements com.banking.dao.UserDao {
 	}
 
 	@Override
-	public User getUser(String username) throws SQLException {
+	public User getUser(String username) {
 		if(!isUseDatabase())
 			return data.getUserList().get(username);
 		else {
-			try {
-				Connection conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:xe","system","password");
-				Statement st = conn.createStatement();
-				ResultSet rs = st.executeQuery("Select * from BANKING_APPLICATION_USERS where USERNAME = '"+username+"'");
-				if(rs.next() == false) {
-					return null;
-				}
-				else {
+			return (User) jdbcTemplate.queryForObject("Select * from BANKING_APPLICATION_USERS where USERNAME = '"+username+"'", new RowMapper<User>() {
+				@Override
+				public User mapRow(ResultSet rs, int rowNum) throws SQLException {
 					return new User(rs.getInt("ID"), rs.getString("USERNAME"), rs.getString("PASSWORD"), rs.getString("TYPE"));
-
 				}
-				
-			} catch(SQLException e) {
-				e.printStackTrace();
-				System.out.println(e.getMessage());
-				throw new SQLException("Database error trying to get user.");
-				
-			}
+			});
 		}
 	}
 
@@ -120,9 +104,9 @@ public class UserDaoImpl implements com.banking.dao.UserDao {
 				data.getUserList().put(username, new User(uniqueID, username, password, type));
 			}
 			
-			if(properties.getProperties().get("data-source").equals("file")) {
+			if(properties.getDatasource().equals("file")) {
 				try {
-					BufferedWriter writer = new BufferedWriter(new FileWriter(properties.getProperties().get("userData"), true));
+					BufferedWriter writer = new BufferedWriter(new FileWriter(properties.getUserData(), true));
 					writer.write(uniqueID+":"+username+":"+password+":"+type);
 					writer.newLine();
 					writer.close();
@@ -133,18 +117,7 @@ public class UserDaoImpl implements com.banking.dao.UserDao {
 			}
 		}
 		else {
-			try {
-				Connection conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:xe","system","password");
-				Statement st = conn.createStatement();
-				PreparedStatement ps = conn.prepareStatement("Insert into BANKING_APPLICATION_USERS (ID, USERNAME, PASSWORD, TYPE) VALUES (BANKING_APPLICATION_USERS_PKSEQ.nextval, ?, ?, ?)");
-				ps.setString(1, username);
-				ps.setString(2, password);
-				ps.setString(3, type);
-				ps.executeUpdate();
-			}catch(SQLException e) {
-				e.printStackTrace();
-				throw new SQLException("Database error trying to add customer.");
-			}
+				jdbcTemplate.execute("Insert into BANKING_APPLICATION_USERS (ID, USERNAME, PASSWORD, TYPE) VALUES (BANKING_APPLICATION_USERS_PKSEQ.nextval, '"+username+"', '"+password+"', '"+type+"')");
 		}
 	}
 	

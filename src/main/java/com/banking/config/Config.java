@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.stereotype.Component;
 
 import com.banking.data.Database;
 import com.banking.entities.Properties;

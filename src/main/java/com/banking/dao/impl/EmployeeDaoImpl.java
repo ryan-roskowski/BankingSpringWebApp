@@ -4,17 +4,16 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
+import com.banking.entities.DBProperties;
 import com.banking.entities.Employee;
-import com.banking.entities.Properties;
 import com.banking.data.Database;
 
 @Component
@@ -24,24 +23,21 @@ public class EmployeeDaoImpl implements com.banking.dao.EmployeeDao {
 	Database data;
 	
 	@Autowired
-	Properties properties;
+	DBProperties properties;
 	
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 	
 	private boolean useDatabase;
 
-	public EmployeeDaoImpl(Properties properties, Database data) throws ClassNotFoundException, IOException {
-		if(properties.getProperties().get("data-source").equals("database")) {
+	public EmployeeDaoImpl(DBProperties properties, Database data) throws ClassNotFoundException, IOException {
+		if(properties.getDatasource().equals("database")) {
 			this.useDatabase = true;
-			try {
-				Class.forName("oracle.jdbc.driver.OracleDriver");
-			} catch (ClassNotFoundException e) {
-				throw new ClassNotFoundException("oracle.jdbc.driver.OracleDriver class not found.");
-			}
 		}
-		else if(properties.getProperties().get("data-source").equals("file")) {
+		else if(properties.getDatasource().equals("file")) {
 			BufferedReader reader;
 			try {
-				reader = new BufferedReader(new FileReader(properties.getProperties().get("employeeData")));
+				reader = new BufferedReader(new FileReader(properties.getEmployeeData()));
 				String line;
 				String[] employeeData;
 				while((line = reader.readLine()) != null) {
@@ -58,7 +54,7 @@ public class EmployeeDaoImpl implements com.banking.dao.EmployeeDao {
 	}
 
 	@Override
-	public Employee getEmployee(int userId) throws IOException, SQLException {
+	public Employee getEmployee(int userId) throws IOException {
 		if(!isUseDatabase()) {
 			for(Employee e : data.getEmployeeList().values()) {
 				if(e.getUserId() == userId) {
@@ -68,30 +64,19 @@ public class EmployeeDaoImpl implements com.banking.dao.EmployeeDao {
 			return null;
 		}
 		else {
-			try {
-				Connection conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:xe","system","password");
-				Statement st = conn.createStatement();
-				ResultSet rs = st.executeQuery("Select * from BANKING_APPLICATION_EMPLOYEES where USERID = "+userId);
-				if(rs.next() == false) {
-					System.out.println("False");
-					return null;
-				}
-				else {
+			return (Employee) jdbcTemplate.queryForObject("Select * from BANKING_APPLICATION_EMPLOYEES where USERID = "+userId, new RowMapper<Employee>() {
+				@Override
+				public Employee mapRow(ResultSet rs, int rowNum) throws SQLException {
 					return new Employee(rs.getInt("ID"), rs.getInt("USERID"),rs.getString("FIRST_NAME"), rs.getString("LAST_NAME"), rs.getString("ADDRESS"), rs.getString("PHONE"), rs.getString("TYPE"));
-
 				}
 				
-			} catch(SQLException e) {
-				e.printStackTrace();
-				throw new SQLException("Database error trying to get user.");
-				
-			}
+			});
 		}
 	}
 
 	@Override
 	public void addEmployee(int id, String password, String firstname, String lastname, String type)
-			throws IOException, SQLException {
+			throws IOException {
 		// TODO Auto-generated method stub
 		
 	}
@@ -104,11 +89,11 @@ public class EmployeeDaoImpl implements com.banking.dao.EmployeeDao {
 		this.data = data;
 	}
 
-	public Properties getProperties() {
+	public DBProperties getProperties() {
 		return properties;
 	}
 
-	public void setProperties(Properties properties) {
+	public void setProperties(DBProperties properties) {
 		this.properties = properties;
 	}
 

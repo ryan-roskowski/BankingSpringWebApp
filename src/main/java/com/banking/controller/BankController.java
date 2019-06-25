@@ -14,26 +14,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.banking.dao.*;
-import com.banking.dao.impl.*;
 import com.banking.data.Database;
-import com.banking.entities.*;
 import com.banking.entities.Customer;
 import com.banking.entities.Employee;
-import com.banking.entities.Properties;
 import com.banking.entities.Transaction;
 import com.banking.entities.User;
-import com.banking.controller.*;
 import com.banking.services.AccountService;
 import com.banking.services.EmployeeService;
-import com.banking.services.UserService;
-import com.banking.services.impl.AccountServiceImpl;
-import com.banking.services.impl.EmployeeServiceImpl;
-import com.banking.services.impl.UserServiceImpl;
 import com.banking.enums.DepositResult;
 import com.banking.enums.UserAction;
 import com.banking.enums.WithdrawResult;
-import com.banking.services.*;
-import com.banking.services.impl.*;
+
 
 @Controller
 public class BankController {
@@ -41,19 +32,13 @@ public class BankController {
 	@Autowired
 	private Database data;
 	@Autowired
-	private Properties properties;
-	@Autowired
 	private UserDao userDao;
 	@Autowired
 	private CustomerDao customerDao;
 	@Autowired
-	private EmployeeDao employeeDao;
-	@Autowired
 	private AccountDao accountDao;
 	@Autowired
 	private TransactionDao transactionDao;
-	@Autowired
-	private UserService userService;
 	@Autowired
 	private EmployeeService employeeService;
 	@Autowired
@@ -103,6 +88,7 @@ public class BankController {
 		case CREATE_ACCOUNT_FOR_CUSTOMER:
 			return "newAccount";
 		case CREATE_CUSTOMER:
+			System.out.println("Create Customer in Post mapping menuAction");
 			return "newCustomer";
 		case DEPOSIT:
 			try {
@@ -309,12 +295,14 @@ public class BankController {
 	
 	@PostMapping("/addCustomer")
 	public String addCustomer(Model model, HttpServletRequest request) {
+		System.out.println("At PostMapping to add the customer");
 		if(request.getParameter("username").equals("") || request.getParameter("password").equals("") || request.getParameter("fname").equals("")
 				|| request.getParameter("lname").equals("") || request.getParameter("address").equals("") || request.getParameter("phone").equals("")){
 					model.addAttribute("message", "Incomplete input given.");
 					return "messageContainer";
 				}
 				try {
+					System.out.println("About to call emp service");
 					employeeService.createCustomerUser(request.getParameter("username"), request.getParameter("password"), request.getParameter("fname"),
 							request.getParameter("lname"), request.getParameter("address"), request.getParameter("phone"));
 					request.setAttribute("message", "Added Customer: Username="+request.getParameter("username")+", Password="+request.getParameter("username")+
@@ -323,6 +311,8 @@ public class BankController {
 					return "messageContainer";
 					
 				} catch(Exception e) {
+					System.out.println("Exception caught");
+					e.printStackTrace();
 					return "error";
 				}
 	}
