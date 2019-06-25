@@ -231,7 +231,7 @@ public class BankController {
 			}
 		}
 		catch(Exception e) {
-			return "error";
+			return "/error";
 		}
 	}
 	
@@ -266,7 +266,7 @@ public class BankController {
 			}
 		}
 		catch(Exception e) {
-			return "error";
+			return "/error";
 		}
 	}
 	

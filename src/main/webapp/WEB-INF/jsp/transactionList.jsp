@@ -13,6 +13,7 @@
 <body>
 <h2>Transactions for ${name}'s account ${accountNumber}</h2>
 <table style="border-collapse: collapse; border-spacing: 5px; width: 600px;">
+<tr><td>Date</td><td>Type</td><td>Amount</td></tr>
 	<c:forEach items="${transactionList}" var="transaction">
 		<tr style="border: 1px solid black;"> 
 			 <td style="text-align: center;">${transaction.date}</td>
